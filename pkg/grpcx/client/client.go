@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/Brain-Wave-Ecosystem/go-common/pkg/retry"
 
 	"google.golang.org/grpc"

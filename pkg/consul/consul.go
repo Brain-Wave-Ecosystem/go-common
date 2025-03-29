@@ -2,8 +2,9 @@ package consul
 
 import (
 	"fmt"
-	"github.com/Brain-Wave-Ecosystem/go-common/pkg/clients"
 	"time"
+
+	"github.com/Brain-Wave-Ecosystem/go-common/pkg/clients"
 
 	"go.uber.org/zap"
 

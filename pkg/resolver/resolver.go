@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/consul/api"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/resolver"

@@ -3,10 +3,11 @@ package net
 import (
 	"context"
 	"errors"
-	"github.com/Brain-Wave-Ecosystem/go-common/pkg/retry"
 	"net"
 	"syscall"
 	"time"
+
+	"github.com/Brain-Wave-Ecosystem/go-common/pkg/retry"
 )
 
 func Dial(network, addr string) (net.Conn, error) {

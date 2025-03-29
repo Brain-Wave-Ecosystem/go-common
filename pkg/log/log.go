@@ -2,10 +2,11 @@ package log
 
 import (
 	"context"
+	"io"
+
 	"github.com/DavidMovas/gopherbox/pkg/closer"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"io"
 )
 
 type Logger struct {
