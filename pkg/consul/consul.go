@@ -56,7 +56,7 @@ func NewConsul(consulURL, name, address string, grpcPort int, logger *zap.Logger
 		timeout:           "5s",
 		tll:               "15s",
 		deregisterTimeout: "30s",
-		agentSelfTimeout:  20 * time.Second,
+		agentSelfTimeout:  30 * time.Second,
 	}
 
 	for _, option := range options {
@@ -107,7 +107,7 @@ func (c *Consul) register() error {
 		registration.Check = c.service.check
 	} else {
 		registration.Check = &api.AgentServiceCheck{
-			Name:                           fmt.Sprintf("%s-%d", c.service.addr, c.service.grpcPort),
+			Name:                           fmt.Sprintf("%s-%d", c.service.name, c.service.grpcPort),
 			GRPC:                           fmt.Sprintf("%s:%d", c.service.addr, c.service.grpcPort),
 			Interval:                       c.service.interval,
 			Timeout:                        c.service.timeout,
