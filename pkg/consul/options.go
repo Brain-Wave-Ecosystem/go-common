@@ -11,25 +11,25 @@ func WithServiceCheck(addr string, port int) Option {
 	return newOptFunc(func(consul *Consul) {
 		var i, t, d string
 
-		if consul.interval != "" {
-			i = consul.interval
+		if consul.service.interval != "" {
+			i = consul.service.interval
 		} else {
 			i = "10s"
 		}
 
-		if consul.timeout != "" {
-			t = consul.timeout
+		if consul.service.timeout != "" {
+			t = consul.service.timeout
 		} else {
 			t = "5s"
 		}
 
-		if consul.deregisterTimeout != "" {
-			d = consul.deregisterTimeout
+		if consul.service.deregisterTimeout != "" {
+			d = consul.service.deregisterTimeout
 		} else {
 			d = "30s"
 		}
 
-		consul.check = &api.AgentServiceCheck{
+		consul.service.check = &api.AgentServiceCheck{
 			Name:                           fmt.Sprintf("%s-%d", addr, port),
 			HTTP:                           fmt.Sprintf("http://%s:%d/health", addr, port),
 			Interval:                       i,
@@ -41,37 +41,37 @@ func WithServiceCheck(addr string, port int) Option {
 
 func WithTag(tag string) Option {
 	return newOptFunc(func(consul *Consul) {
-		consul.tag = tag
+		consul.service.tags = append(consul.service.tags, tag)
 	})
 }
 
 func WithCheckInterval(interval string) Option {
 	return newOptFunc(func(consul *Consul) {
-		consul.interval = interval
+		consul.service.interval = interval
 	})
 }
 
 func WithCheckTimeout(timeout string) Option {
 	return newOptFunc(func(consul *Consul) {
-		consul.timeout = timeout
+		consul.service.timeout = timeout
 	})
 }
 
 func WithCheckDeregisterTimeout(timeout string) Option {
 	return newOptFunc(func(consul *Consul) {
-		consul.deregisterTimeout = timeout
+		consul.service.deregisterTimeout = timeout
 	})
 }
 
 func WithCheckTLL(timeout string) Option {
 	return newOptFunc(func(consul *Consul) {
-		consul.tll = timeout
+		consul.service.tll = timeout
 	})
 }
 
 func WithSelfCheckTimeout(timeout time.Duration) Option {
 	return newOptFunc(func(consul *Consul) {
-		consul.agentSelfTimeout = timeout
+		consul.service.agentSelfTimeout = timeout
 	})
 }
 
