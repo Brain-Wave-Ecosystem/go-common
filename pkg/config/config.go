@@ -1,35 +1,28 @@
 package config
 
 import (
-	"fmt"
-
-	"github.com/caarlos0/env/v11"
-	"github.com/joho/godotenv"
+	"time"
 )
 
-type ServiceConfig interface {
-	SetDefaults()
+type DefaultGatewayConfig struct {
+	Local           bool          `env:"LOCAL" envDefault:"true"`
+	LogLevel        string        `env:"LOG_LEVEL" envDefault:"info"`
+	HTTPPort        string        `env:"HTTP_PORT" envDefault:"8000"`
+	TCPPort         string        `env:"TCP_PORT" envDefault:"8001"`
+	GRPCPort        string        `env:"GRPC_PORT" envDefault:"8002"`
+	WSPort          string        `env:"WS_PORT" envDefault:"8003"`
+	StartTimeout    time.Duration `env:"START_TIMEOUT" envDefault:"15s"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`
+	ConsulURL       string        `env:"CONSUL_URL" envDefault:"http://127.0.0.1:8500"`
 }
 
-type DefaultConfig struct {
-	Name                    string `env:"NAME"`
-	Address                 string `env:"ADDRESS"`
-	Tag                     string `env:"TAG" envDefault:"v1"`
-	Local                   bool   `env:"LOCAL" envDefault:"false"`
-	WebPort                 int    `env:"PORT" envDefault:"8010"`
-	GRPCPort                int    `env:"GRPC_PORT" envDefault:"8011"`
-	GracefulShutdownTimeout int    `env:"GRACEFUL_TIMEOUT" envDefault:"10"`
-	ConsulAddr              string `env:"CONSUL_ADDRESS" envDefault:"127.0.0.1:8500"`
-	TracerAddr              string `env:"TRACER_ADDRESS" envDefault:"http://jaeger:14268/api/traces"`
-}
-
-func NewConfig[T any]() (*T, error) {
-	_ = godotenv.Load()
-
-	config := new(T)
-	if err := env.Parse(config); err != nil {
-		return nil, fmt.Errorf("error parsing config: %w", err)
-	}
-
-	return config, nil
+type DefaultServiceConfig struct {
+	Name            string        `env:"NAME" envDefault:"service"`
+	Address         string        `env:"ADDRESS" envDefault:"127.0.0.1"`
+	Local           bool          `env:"LOCAL" envDefault:"true"`
+	LogLevel        string        `env:"LOG_LEVEL" envDefault:"info"`
+	GRPCPort        int           `env:"GRPC_PORT" envDefault:"50000"`
+	StartTimeout    time.Duration `env:"START_TIMEOUT" envDefault:"15s"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`
+	ConsulURL       string        `env:"CONSUL_URL" envDefault:"http://127.0.0.1:8500"`
 }
