@@ -2,6 +2,7 @@ package consul
 
 import (
 	"fmt"
+	"github.com/Brain-Wave-Ecosystem/go-common/pkg/clients"
 	"time"
 
 	"go.uber.org/zap"
@@ -12,8 +13,14 @@ import (
 )
 
 type Consul struct {
-	*api.Client
-	logger            *zap.Logger
+	client    *api.Client
+	consulURL string
+	logger    *zap.Logger
+	service   *ServiceConfig
+	plans     []*Plan
+}
+
+type ServiceConfig struct {
 	id                string
 	name              string
 	addr              string
@@ -27,67 +34,91 @@ type Consul struct {
 	agentSelfTimeout  time.Duration
 }
 
-func NewConsul(client *api.Client, name, address string, grpcPort int, logger *zap.Logger, options ...Option) *Consul {
-	c := &Consul{Client: client}
-
-	c.name = name
-	c.addr = address
-	c.grpcPort = grpcPort
-	c.logger = logger
-	c.tags = []string{"v1", "http", "grpc"}
-	c.interval = "10s"
-	c.timeout = "5s"
-	c.tll = "15s"
-	c.deregisterTimeout = "30s"
-	c.agentSelfTimeout = time.Second * 20
-
-	for _, option := range options {
-		option.apply(c)
+func NewConsul(consulURL, name, address string, grpcPort int, logger *zap.Logger, options ...Option) (*Consul, error) {
+	client, err := clients.NewConsulClient(consulURL)
+	if err != nil {
+		return nil, err
 	}
 
-	c.id = fmt.Sprintf("%s-%d", c.name, c.grpcPort)
+	var c Consul
 
-	return c
+	c.client = client
+	c.consulURL = consulURL
+	c.logger = logger
+
+	c.service = &ServiceConfig{
+		name:              name,
+		addr:              address,
+		grpcPort:          grpcPort,
+		tags:              []string{"v1", "http", "grpc"},
+		interval:          "10s",
+		timeout:           "5s",
+		tll:               "15s",
+		deregisterTimeout: "30s",
+		agentSelfTimeout:  20 * time.Second,
+	}
+
+	for _, option := range options {
+		option.apply(&c)
+	}
+
+	c.service.id = fmt.Sprintf("%s-%d", c.service.name, c.service.grpcPort)
+
+	return &c, nil
 }
 
 func (c *Consul) Consul() *api.Client {
-	return c.Client
+	return c.client
 }
 
 func (c *Consul) RegisterService() error {
 	return c.register()
 }
 
+func (c *Consul) WatchService(serviceAddr string) <-chan []*api.ServiceEntry {
+	queue := make(chan []*api.ServiceEntry, 3)
+
+	plan := NewPlan(c.consulURL, serviceAddr, queue)
+
+	c.plans = append(c.plans, plan)
+
+	return queue
+}
+
 func (c *Consul) Stop() error {
-	return c.Client.Agent().ServiceDeregister(c.id)
+	for _, plan := range c.plans {
+		plan.Stop()
+	}
+
+	return c.client.Agent().ServiceDeregister(c.service.id)
 }
 
 func (c *Consul) register() error {
 	registration := &api.AgentServiceRegistration{
-		ID:      c.id,
-		Name:    c.name,
-		Address: c.addr,
-		Port:    c.grpcPort,
-		Tags:    c.tags,
+		ID:      c.service.id,
+		Name:    c.service.name,
+		Address: c.service.addr,
+		Port:    c.service.grpcPort,
+		Tags:    c.service.tags,
 	}
 
-	if c.check != nil {
-		registration.Check = c.check
+	if c.service.check != nil {
+		registration.Check = c.service.check
 	} else {
 		registration.Check = &api.AgentServiceCheck{
-			Name:                           fmt.Sprintf("%s-%d", c.addr, c.grpcPort),
-			GRPC:                           fmt.Sprintf("%s:%d", c.addr, c.grpcPort),
-			Interval:                       c.interval,
-			Timeout:                        c.timeout,
-			DeregisterCriticalServiceAfter: c.deregisterTimeout,
+			Name:                           fmt.Sprintf("%s-%d", c.service.addr, c.service.grpcPort),
+			GRPC:                           fmt.Sprintf("%s:%d", c.service.addr, c.service.grpcPort),
+			Interval:                       c.service.interval,
+			Timeout:                        c.service.timeout,
+			DeregisterCriticalServiceAfter: c.service.deregisterTimeout,
 		}
 	}
 
-	if err := c.Agent().ServiceRegister(registration); err != nil {
+	if err := c.client.Agent().ServiceRegister(registration); err != nil {
 		return apperrors.Internal(err)
 	}
 
-	c.logger.Info("Service registered in Consul", zap.String("name", c.name), zap.String("address", c.addr), zap.Strings("tags", c.tags))
+	c.logger.Info("Service registered in Consul", zap.String("name", c.service.name), zap.String("address", c.service.addr), zap.Strings("tags", c.service.tags))
 
 	return nil
 }
