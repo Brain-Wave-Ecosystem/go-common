@@ -17,27 +17,24 @@ type Consul struct {
 	id                string
 	name              string
 	addr              string
-	tag               string
-	webPort           int
+	tags              []string
 	grpcPort          int
 	check             *api.AgentServiceCheck
 	interval          string
 	timeout           string
 	tll               string
 	deregisterTimeout string
-	timer             *time.Timer
 	agentSelfTimeout  time.Duration
 }
 
-func NewConsul(client *api.Client, name, address string, webPort, grpcPort int, logger *zap.Logger, options ...Option) *Consul {
+func NewConsul(client *api.Client, name, address string, grpcPort int, logger *zap.Logger, options ...Option) *Consul {
 	c := &Consul{Client: client}
 
 	c.name = name
 	c.addr = address
-	c.webPort = webPort
 	c.grpcPort = grpcPort
 	c.logger = logger
-	c.tag = "v1"
+	c.tags = []string{"v1", "http", "grpc"}
 	c.interval = "10s"
 	c.timeout = "5s"
 	c.tll = "15s"
@@ -48,8 +45,7 @@ func NewConsul(client *api.Client, name, address string, webPort, grpcPort int, 
 		option.apply(c)
 	}
 
-	c.id = fmt.Sprintf("%s-%s-%d", c.name, c.tag, c.grpcPort)
-	c.timer = time.NewTimer(c.agentSelfTimeout)
+	c.id = fmt.Sprintf("%s-%d", c.name, c.grpcPort)
 
 	return c
 }
@@ -63,7 +59,6 @@ func (c *Consul) RegisterService() error {
 }
 
 func (c *Consul) Stop() error {
-	c.timer.Stop()
 	return c.Client.Agent().ServiceDeregister(c.id)
 }
 
@@ -73,15 +68,15 @@ func (c *Consul) register() error {
 		Name:    c.name,
 		Address: c.addr,
 		Port:    c.grpcPort,
-		Tags:    []string{c.tag},
+		Tags:    c.tags,
 	}
 
 	if c.check != nil {
 		registration.Check = c.check
 	} else {
 		registration.Check = &api.AgentServiceCheck{
-			Name:                           fmt.Sprintf("%s-%d", c.addr, c.webPort),
-			HTTP:                           fmt.Sprintf("http://%s:%d/health", c.addr, c.webPort),
+			Name:                           fmt.Sprintf("%s-%d", c.addr, c.grpcPort),
+			GRPC:                           fmt.Sprintf("%s:%d", c.addr, c.grpcPort),
 			Interval:                       c.interval,
 			Timeout:                        c.timeout,
 			DeregisterCriticalServiceAfter: c.deregisterTimeout,
@@ -92,7 +87,7 @@ func (c *Consul) register() error {
 		return apperrors.Internal(err)
 	}
 
-	c.logger.Info("Service registered in Consul", zap.String("name", c.name), zap.String("address", c.addr), zap.String("tags", c.tag))
+	c.logger.Info("Service registered in Consul", zap.String("name", c.name), zap.String("address", c.addr), zap.Strings("tags", c.tags))
 
 	return nil
 }

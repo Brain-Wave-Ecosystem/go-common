@@ -9,7 +9,7 @@ import (
 )
 
 type Logger struct {
-	*zap.Logger
+	zap    *zap.Logger
 	file   io.Closer
 	closer *closer.Closer
 }
@@ -32,15 +32,15 @@ func NewLogger(local bool, level string) (*Logger, error) {
 	cfg.DisableStacktrace = true
 	cfg.Level = atomicLevel
 	cfg.OutputPaths = []string{"stdout"}
-	logger.Logger, _ = cfg.Build(zap.WithCaller(true))
+	logger.zap, _ = cfg.Build(zap.WithCaller(true))
 
-	c.Push(logger.Logger.Sync)
+	c.Push(logger.zap.Sync)
 
 	return logger, nil
 }
 
 func (l *Logger) Zap() *zap.Logger {
-	return l.Logger
+	return l.zap
 }
 
 func (l *Logger) Stop() error {
