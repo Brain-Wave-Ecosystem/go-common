@@ -3,6 +3,7 @@ package consul
 import (
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
+	"go.uber.org/zap"
 )
 
 const planType = "service"
@@ -13,9 +14,11 @@ type Plan struct {
 	*watch.Plan
 	input chan<- []*api.ServiceEntry
 	errCh chan<- error
+
+	logger *zap.Logger
 }
 
-func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEntry) *Plan {
+func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEntry, logger *zap.Logger) *Plan {
 	p := &Plan{}
 
 	pl, _ := watch.Parse(map[string]interface{}{
@@ -28,6 +31,7 @@ func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEn
 	p.service = serviceName
 	p.Plan = pl
 	p.input = input
+	p.logger = logger
 
 	pl.Handler = p.handle
 
@@ -36,8 +40,10 @@ func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEn
 
 func (p *Plan) handle(_ uint64, data interface{}) {
 	if !p.IsStopped() {
+		p.logger.Debug("Plan working [1]", zap.String("address", p.service))
 		entries := data.([]*api.ServiceEntry)
 		if entries != nil && len(entries) > 0 {
+			p.logger.Debug("Plan working [2]", zap.String("address", p.service))
 			p.input <- entries
 		}
 	}
