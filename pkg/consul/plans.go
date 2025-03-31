@@ -11,13 +11,13 @@ const planType = "service"
 type Plan struct {
 	consulURL string
 	service   string
-	*watch.Plan
-	input chan<- []*api.ServiceEntry
-	errCh chan<- error
+	plan      *watch.Plan
+	input     chan<- []*api.ServiceEntry
+	errCh     chan<- error
 }
 
 func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEntry) *Plan {
-	p := &Plan{}
+	var p = &Plan{}
 
 	pl, _ := watch.Parse(map[string]interface{}{
 		"type":        planType,
@@ -25,9 +25,11 @@ func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEn
 		"passingonly": true,
 	})
 
+	log.Debug("new consul plan", serviceName)
+
 	p.consulURL = consulURL
 	p.service = serviceName
-	p.Plan = pl
+	p.plan = pl
 	p.input = input
 
 	pl.Handler = p.handle
@@ -36,7 +38,7 @@ func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEn
 }
 
 func (p *Plan) handle(_ uint64, data interface{}) {
-	if !p.IsStopped() {
+	if !p.plan.IsStopped() {
 		log.Debug("Plan.Handle is already running [1]", p.service)
 		entries := data.([]*api.ServiceEntry)
 		if entries != nil && len(entries) > 0 {
@@ -48,7 +50,9 @@ func (p *Plan) handle(_ uint64, data interface{}) {
 
 func (p *Plan) Run(errCh chan<- error) {
 	go func() {
-		if err := p.Plan.Run(p.consulURL); err != nil {
+		log.Debug("run consul", p.service)
+
+		if err := p.plan.Run(p.consulURL); err != nil {
 			errCh <- err
 		}
 	}()
@@ -57,9 +61,11 @@ func (p *Plan) Run(errCh chan<- error) {
 }
 
 func (p *Plan) Stop() {
-	p.Plan.Stop()
+	p.plan.Stop()
 
-	if p.Plan.IsStopped() {
+	log.Debug("stop consul", p.service)
+
+	if p.plan.IsStopped() {
 		close(p.input)
 		close(p.errCh)
 	}
