@@ -2,12 +2,14 @@ package log
 
 import (
 	"context"
+	"github.com/Brain-Wave-Ecosystem/go-common/pkg/abstractions"
 	"io"
 
 	"github.com/DavidMovas/gopherbox/pkg/closer"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
+
+var _ abstractions.ILogger = (*Logger)(nil)
 
 type Logger struct {
 	zap    *zap.Logger
@@ -15,7 +17,7 @@ type Logger struct {
 	closer *closer.Closer
 }
 
-func NewLogger(local bool, level string) (*Logger, error) {
+func NewLogger(local bool, level string) *Logger {
 	logger := &Logger{}
 
 	c := closer.NewCloser()
@@ -37,32 +39,9 @@ func NewLogger(local bool, level string) (*Logger, error) {
 
 	c.Push(logger.zap.Sync)
 
-	return logger, nil
+	return logger
 }
 
-func (l *Logger) Zap() *zap.Logger {
-	return l.zap
-}
-
-func (l *Logger) Stop() error {
+func (l *Logger) Close() error {
 	return l.closer.Close(context.Background())
-}
-
-func levelFromString(level string) zap.AtomicLevel {
-	switch level {
-	case "debug":
-		return zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	case "info":
-		return zap.NewAtomicLevelAt(zapcore.InfoLevel)
-	case "warn":
-		return zap.NewAtomicLevelAt(zapcore.WarnLevel)
-	case "error":
-		return zap.NewAtomicLevelAt(zapcore.ErrorLevel)
-	case "fatal":
-		return zap.NewAtomicLevelAt(zapcore.FatalLevel)
-	case "panic":
-		return zap.NewAtomicLevelAt(zapcore.PanicLevel)
-	default:
-		return zap.NewAtomicLevelAt(zapcore.InfoLevel)
-	}
 }

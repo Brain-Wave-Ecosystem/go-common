@@ -39,10 +39,8 @@ func NewPlan(consulURL string, serviceName string, input chan<- []*api.ServiceEn
 
 func (p *Plan) handle(_ uint64, data interface{}) {
 	if !p.plan.IsStopped() {
-		log.Debug("Plan.Handle is already running [1]", p.service)
 		entries := data.([]*api.ServiceEntry)
 		if entries != nil && len(entries) > 0 {
-			log.Debug("Plan.Handle is already running [2]", p.service)
 			p.input <- entries
 		}
 	}
@@ -50,8 +48,6 @@ func (p *Plan) handle(_ uint64, data interface{}) {
 
 func (p *Plan) Run(errCh chan<- error) {
 	go func() {
-		log.Debug("run consul", p.service)
-
 		if err := p.plan.Run(p.consulURL); err != nil {
 			errCh <- err
 		}
@@ -62,8 +58,6 @@ func (p *Plan) Run(errCh chan<- error) {
 
 func (p *Plan) Stop() {
 	p.plan.Stop()
-
-	log.Debug("stop consul", p.service)
 
 	if p.plan.IsStopped() {
 		close(p.input)
